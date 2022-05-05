@@ -1,5 +1,5 @@
 # jsGame
-jsGame is a javascript game template with a builtin physics engine.
+jsGame is a javascript game template with a builtin sat collusion detection and physics engine.
 
 jsGame uses HTML:5 Canvas to render.
 
