@@ -1,3 +1,166 @@
+
+//      math
+
+class CollData{
+    constructor(o1, o2, normal, pen, cp){
+        this.o1 = o1;
+        this.o2 = o2;
+        this.normal = normal;
+        this.pen = pen;
+        this.cp = cp;
+    }
+
+    penRes(){
+        let penResolution = this.normal.mult(this.pen / (this.o1.inv_m + this.o2.inv_m));
+        this.o1.pos = this.o1.pos.add(penResolution.mult(this.o1.inv_m));
+        this.o2.pos = this.o2.pos.add(penResolution.mult(-this.o2.inv_m));
+    }
+
+    collRes(){
+        //1. Closing velocity
+        let collArm1 = this.cp.subtr(this.o1.comp[0].pos);
+        let rotVel1 = new Vector(-this.o1.angVel * collArm1.y, this.o1.angVel * collArm1.x);
+        let closVel1 = this.o1.vel.add(rotVel1);
+        let collArm2 = this.cp.subtr(this.o2.comp[0].pos);
+        let rotVel2= new Vector(-this.o2.angVel * collArm2.y, this.o2.angVel * collArm2.x);
+        let closVel2 = this.o2.vel.add(rotVel2);
+
+        //2. Impulse augmentation
+        let impAug1 = Vector.cross(collArm1, this.normal);
+        impAug1 = impAug1 * this.o1.inv_inertia * impAug1;
+        let impAug2 = Vector.cross(collArm2, this.normal);
+        impAug2 = impAug2 * this.o2.inv_inertia * impAug2;
+
+        let relVel = closVel1.subtr(closVel2);
+        let sepVel = Vector.dot(relVel, this.normal);
+        let new_sepVel = -sepVel * Math.min(this.o1.elasticity, this.o2.elasticity);
+        let vsep_diff = new_sepVel - sepVel;
+
+        let impulse = vsep_diff / (this.o1.inv_m + this.o2.inv_m + impAug1 + impAug2);
+        let impulseVec = this.normal.mult(impulse);
+
+        //3. Changing the velocities
+        this.o1.vel = this.o1.vel.add(impulseVec.mult(this.o1.inv_m));
+        this.o2.vel = this.o2.vel.add(impulseVec.mult(-this.o2.inv_m));
+
+        this.o1.angVel += this.o1.inv_inertia * Vector.cross(collArm1, impulseVec);
+        this.o2.angVel -= this.o2.inv_inertia * Vector.cross(collArm2, impulseVec);
+    }
+}
+
+class Matrix{
+    constructor(rows, cols){
+        this.rows = rows;
+        this.cols = cols;
+        this.data = [];
+
+        for (let i = 0; i<this.rows; i++){
+            this.data[i] = [];
+            for (let j=0; j<this.cols; j++){
+                this.data[i][j] = 0;
+            }
+        }
+    }
+
+    multiplyVec(vec){
+        let result = new Vector(0,0);
+        result.x = this.data[0][0]*vec.x + this.data[0][1]*vec.y;
+        result.y = this.data[1][0]*vec.x + this.data[1][1]*vec.y;
+        return result;
+    }
+
+    rotMx22(angle){
+        this.data[0][0] = Math.cos(angle);
+        this.data[0][1] = -Math.sin(angle);
+        this.data[1][0] = Math.sin(angle);
+        this.data[1][1] = Math.cos(angle);
+    }
+}
+class Vector{
+    constructor(x, y){
+        this.x = x;
+        this.y = y;
+    }  
+   
+    set(x, y){
+        this.x = x;
+        this.y = y;
+    }
+
+    add(v){
+        return new Vector(this.x+v.x, this.y+v.y);
+    }
+
+    subtr(v){
+        return new Vector(this.x-v.x, this.y-v.y);
+    }
+
+    mag(){
+        return Math.sqrt(this.x**2 + this.y**2);
+    }
+
+    mult(n){
+        return new Vector(this.x*n, this.y*n);
+    }
+
+    normal(){
+        return new Vector(-this.y, this.x).unit();
+    }
+
+    unit(){
+        if(this.mag() === 0){
+            return new Vector(0,0);
+        } else {
+            return new Vector(this.x/this.mag(), this.y/this.mag());
+        }
+    }
+
+    drawVec(start_x, start_y, n, color){
+        ctx.beginPath();
+        ctx.moveTo(start_x, start_y);
+        ctx.lineTo(start_x + this.x * n, start_y + this.y * n);
+        ctx.strokeStyle = color;
+        ctx.stroke();
+        ctx.closePath();
+    }
+    
+    static dot(v1, v2){
+        return v1.x*v2.x + v1.y*v2.y;
+    }
+
+    static cross(v1, v2){
+        return v1.x*v2.y - v1.y*v2.x;
+    }
+}
+
+// Returns with a number rounded to <precision> decimals
+function round(number, precision){
+    let factor = 10**precision;
+    return Math.round(number * factor) / factor;
+}
+
+// Returns with a random integer
+function randInt(min, max){
+    return Math.floor(Math.random() * (max-min+1)) + min;
+}
+
+// Draws a circle around a specific point
+function testCircle(x, y, color="black"){
+    ctx.beginPath();
+    ctx.arc(x, y, 10, 0, 2*Math.PI);
+    ctx.strokeStyle = color;
+    ctx.stroke();
+    ctx.closePath();
+}
+
+
+function toDegrees (angle) {
+    return angle * (180 / Math.PI);
+}
+function toRadians (angle) {
+    return angle * (Math.PI / 180);
+}
+
 function closestPointOnLS(p, w1){
     let ballToWallStart = w1.start.subtr(p);
     if(Vector.dot(w1.dir, ballToWallStart) > 0){
@@ -260,4 +423,752 @@ function collide(o1, o2){
     } else {
         return false;
     }
+}
+
+// 
+
+/////////   controller code
+
+// 
+
+
+class Controller {
+    static keyMap = new Map();
+    static keyDown = window.addEventListener('keydown', function(e) {
+        Controller.keyMap.set(e.key.toUpperCase(), e.type === "keydown");
+    });
+    static keyUp = window.addEventListener('keyup', function(e) {
+        Controller.keyMap.set(e.key.toUpperCase(), e.type === "keydown");
+    });
+}
+class Pointer {
+    static pos = new Vector();
+    static pointer = window.addEventListener('click', function(e) {
+        Pointer.pos.x = e.x;
+        Pointer.pos.y = e.y;
+    });
+}
+class Userinput {
+    constructor(obj, arg, callbacks) {
+        window.addEventListener('keydown', function(e) {
+            obj.keyMap.set(e.key.toUpperCase(), e.type === "keydown");
+        });
+        window.addEventListener('keyup', function(e) {
+            obj.keyMap.set(e.key.toUpperCase(), e.type === "keydown");
+        });
+    }
+}
+
+//  shapes
+
+class Circle{
+    constructor(x, y, r){
+        this.color = ""
+        this.vertex = [];
+        this.pos = new Vector(x, y);
+        this.r = r;
+    }
+
+    draw(){
+        ctx.beginPath();
+        ctx.arc(this.pos.x, this.pos.y, this.r, 0, 2*Math.PI);
+        if (!this.color){
+            ctx.strokeStyle = "black";
+            ctx.stroke();
+        } else {
+            ctx.fillStyle = this.color;
+            ctx.fill();
+        }
+        ctx.fillStyle = "";
+        ctx.closePath();
+    }
+}
+class Line{
+    constructor(x0, y0, x1, y1){
+        this.color = ""
+        this.vertex = [];
+        this.vertex[0] = new Vector(x0, y0);
+        this.vertex[1] = new Vector(x1, y1);
+        this.dir = this.vertex[1].subtr(this.vertex[0]).unit();
+        this.mag = this.vertex[1].subtr(this.vertex[0]).mag();
+        this.pos = new Vector((this.vertex[0].x+this.vertex[1].x)/2, (this.vertex[0].y+this.vertex[1].y)/2);
+    }
+
+    draw(){
+        ctx.beginPath();
+        ctx.moveTo(this.vertex[0].x, this.vertex[0].y);
+        ctx.lineTo(this.vertex[1].x, this.vertex[1].y);
+        if (!this.color){
+            ctx.strokeStyle = "black";
+            ctx.stroke();
+        } else {
+            ctx.strokeStyle = this.color;
+            ctx.stroke();
+        }
+        ctx.strokeStyle = "";
+        ctx.closePath();
+    }
+}
+class Poly{
+    constructor(x, y, r, vertexNo){
+        this.color = ""
+        this.vertex = [];
+        for (let a = 0, i = 0; a < 2*Math.PI; a+=(2*Math.PI)/vertexNo, i++) {
+            this.vertex.push(new Vector(x+Math.cos(a)*r, y+Math.sin(a)*r));
+        }
+        this.pos = new Vector(x, y);
+        this.dir = this.vertex[0].subtr(this.pos).unit();
+        this.refDir = this.dir;
+        this.refDiam = [];
+        for (let i = 0; i < this.vertex.length; i++) {
+            this.refDiam.push(this.vertex[i].subtr(this.pos));
+        }
+        this.angle = 0;
+        this.rotMat = new Matrix(2,2);
+    }
+
+    draw(){
+        ctx.beginPath();
+        ctx.moveTo(this.vertex[0].x, this.vertex[0].y);
+        for (let i = 1; i < this.vertex.length; i++) {
+            ctx.lineTo(this.vertex[i].x, this.vertex[i].y);
+        }
+        ctx.lineTo(this.vertex[0].x, this.vertex[0].y);
+        if (!this.color){
+            ctx.strokeStyle = "black";
+            ctx.stroke();
+        } else {
+            ctx.fillStyle = this.color;
+            ctx.fill();
+        }
+        ctx.fillStyle = "";
+        ctx.stroke();
+        ctx.closePath();
+    }
+
+    getVertices(angle){
+        this.rotMat.rotMx22(angle);
+        this.dir = this.rotMat.multiplyVec(this.refDir);
+        for (let i = 0; i < this.vertex.length; i++) {
+            this.vertex[i] = this.pos.add(this.rotMat.multiplyVec(this.refDiam[i]));
+        }
+    }
+}
+class Rectangle{
+    constructor(x1, y1, x2, y2, w){
+        this.color = ""
+        this.vertex = [];
+        this.vertex[0] = new Vector(x1, y1);
+        this.vertex[1] = new Vector(x2, y2);
+        this.dir = this.vertex[1].subtr(this.vertex[0]).unit();
+        this.refDir = this.vertex[1].subtr(this.vertex[0]).unit();
+        this.length = this.vertex[1].subtr(this.vertex[0]).mag();
+        this.width = w;
+        this.vertex[2] = this.vertex[1].add(this.dir.normal().mult(this.width));
+        this.vertex[3] = this.vertex[2].add(this.dir.mult(-this.length));
+        this.pos = this.vertex[0].add(this.dir.mult(this.length/2)).add(this.dir.normal().mult(this.width/2));
+        this.angle = 0;
+        this.rotMat = new Matrix(2,2);
+    }
+
+    draw(){
+        ctx.beginPath();
+        ctx.moveTo(this.vertex[0].x, this.vertex[0].y);
+        ctx.lineTo(this.vertex[1].x, this.vertex[1].y);
+        ctx.lineTo(this.vertex[2].x, this.vertex[2].y);
+        ctx.lineTo(this.vertex[3].x, this.vertex[3].y);
+        ctx.lineTo(this.vertex[0].x, this.vertex[0].y);
+        if (!this.color){
+            ctx.strokeStyle = "black";
+            ctx.stroke();
+        } else {
+            ctx.fillStyle = this.color;
+            ctx.fill();
+        }
+        ctx.fillStyle = "";
+        ctx.closePath();
+    }
+
+    getVertices(angle){
+        this.rotMat.rotMx22(angle);
+        this.dir = this.rotMat.multiplyVec(this.refDir);
+        this.vertex[0] = this.pos.add(this.dir.mult(-this.length/2)).add(this.dir.normal().mult(this.width/2));
+        this.vertex[1] = this.pos.add(this.dir.mult(-this.length/2)).add(this.dir.normal().mult(-this.width/2));
+        this.vertex[2] = this.pos.add(this.dir.mult(this.length/2)).add(this.dir.normal().mult(-this.width/2));
+        this.vertex[3] = this.pos.add(this.dir.mult(this.length/2)).add(this.dir.normal().mult(this.width/2));
+    }
+}
+class Triangle{
+    constructor(x1, y1, x2, y2, x3, y3){
+        this.color = ""
+        this.vertex = [];
+        this.vertex[0] = new Vector(x1, y1);
+        this.vertex[1] = new Vector(x2, y2);
+        this.vertex[2] = new Vector(x3, y3);
+        this.pos = new Vector((this.vertex[0].x+this.vertex[1].x+this.vertex[2].x)/3, (this.vertex[0].y+this.vertex[1].y+this.vertex[2].y)/3);
+        this.dir = this.vertex[0].subtr(this.pos).unit();
+        this.refDir = this.dir;
+        this.refDiam = [];
+        this.refDiam[0] = this.vertex[0].subtr(this.pos);
+        this.refDiam[1] = this.vertex[1].subtr(this.pos);
+        this.refDiam[2] = this.vertex[2].subtr(this.pos);
+        this.angle = 0;
+        this.rotMat = new Matrix(2,2);
+    }
+
+    draw(){
+        ctx.beginPath();
+        ctx.moveTo(this.vertex[0].x, this.vertex[0].y);
+        ctx.lineTo(this.vertex[1].x, this.vertex[1].y);
+        ctx.lineTo(this.vertex[2].x, this.vertex[2].y);
+        ctx.lineTo(this.vertex[0].x, this.vertex[0].y);
+        if (!this.color){
+            ctx.strokeStyle = "black";
+            ctx.stroke();
+        } else {
+            ctx.fillStyle = this.color;
+            ctx.fill();
+        }
+        ctx.fillStyle = "";
+        ctx.closePath();
+    }
+
+    getVertices(angle){
+        this.rotMat.rotMx22(angle);
+        this.dir = this.rotMat.multiplyVec(this.refDir);
+        this.vertex[0] = this.pos.add(this.rotMat.multiplyVec(this.refDiam[0]));
+        this.vertex[1] = this.pos.add(this.rotMat.multiplyVec(this.refDiam[1]));
+        this.vertex[2] = this.pos.add(this.rotMat.multiplyVec(this.refDiam[2]));
+    }
+}
+
+
+//  object
+
+class Body{
+    constructor(x, y){
+        this.comp = [];
+        this.pos = new Vector(x, y);
+        this.inv_m = 0;
+        this.inertia = 0;
+        this.inv_inertia = 0;
+        this.elasticity = 1;
+
+        this.friction = 0.05;
+        this.gravity = 0;
+        this.angFriction = 0.17;
+        this.maxSpeed = 0;
+        this.layer = 0;
+        this.color = "";
+
+        this.vel = new Vector(0, 0);
+        this.acc = new Vector(0, 0);
+        this.keyForce = 1;
+        this.angKeyForce = 0.1;
+        this.angle = 0;
+        this.angVel = 0;
+        this.keyMap = new Map();
+        BODIES.push(this);
+    }
+
+    render(){
+        if(this.color){
+            this.setColor(this.color)
+        }
+        for (let i in this.comp){
+            this.comp[i].draw();
+        }
+    }
+    reposition(){
+        this.acc = this.acc.unit().mult(this.keyForce);
+        this.vel = this.vel.add(this.acc);
+        this.vel = this.vel.mult(1-this.friction);
+        if (this.vel.mag() > this.maxSpeed && this.maxSpeed !== 0){
+            this.vel = this.vel.unit().mult(this.maxSpeed);
+        }
+        this.angVel *= (1-this.angFriction);
+        // console.log(this.angVel);
+    }
+    keyControl(){
+        this.acc.y += this.gravity;
+    }
+    setColor(color){
+        this.comp.forEach(comp => {
+            comp.color = color
+        })
+    }
+    remove(){
+        if (BODIES.indexOf(this) !== -1){
+            BODIES.splice(BODIES.indexOf(this), 1);
+        }
+    }
+}
+
+class Ball extends Body{
+    constructor(x, y, r, m = 0, g = false){
+        super();
+        this.pos = new Vector(x, y);
+        this.comp = [new Circle(x, y, r)];
+        this.maxSpeed = r;
+        this.m = m;
+        if (this.m === 0){
+            this.inv_m = 0;
+        } else {
+            this.inv_m = 1 / this.m;
+        }
+        if (g) {
+            super.gravity = Math.sqrt(1/2 * Math.PI * Math.pow(this.comp[0].r, 2) / this.m);
+        }
+    }
+
+    setPosition(x, y, a = this.angle){
+        this.pos.set(x, y);
+        this.comp[0].pos = this.pos;
+    }
+
+    reposition(){
+        super.reposition();
+        this.setPosition(this.pos.add(this.vel).x, this.pos.add(this.vel).y);
+    }
+
+    keyControl(){
+        this.acc.x = 0
+        this.acc.y = 0
+        if(this.keyMap.get("W")){
+            this.acc.y = -this.gravity*1.5-this.keyForce;
+        }
+        if(this.keyMap.get("A")){
+            this.acc.x = -this.keyForce;
+        }
+        if(this.keyMap.get("S")){
+            this.acc.y = this.keyForce;
+        }
+        if(this.keyMap.get("D")){
+            this.acc.x = this.keyForce;
+        }
+        // console.log(Math.sqrt(1/2 * Math.PI * Math.pow(this.comp[0].r, 2) / this.m));
+        // this.acc.y += Math.sqrt(1/2 * Math.PI * Math.pow(this.comp[0].r, 2) / this.m);
+        super.keyControl();
+    }
+}
+
+class Box extends Body{
+    constructor(x1, y1, x2, y2, w, m = 0, g = false){
+        super();
+        this.comp = [new Rectangle(x1, y1, x2, y2, w)];
+        this.pos = this.comp[0].pos;
+        this.m = m;
+        if (this.m === 0){
+            this.inv_m = 0;
+        } else {
+            this.inv_m = 1 / this.m;
+        }
+        this.inertia = this.m * (this.comp[0].width**2 +this.comp[0].length**2) / 12;
+        if (this.m === 0){
+            this.inv_inertia = 0;
+        } else {
+            this.inv_inertia = 1 / this.inertia;
+        }
+        if (g) {
+        super.gravity = Math.sqrt((1/2*w*(x2-x1)) / this.m);
+        }
+    }
+
+    keyControl(){
+        if (this.player) {
+            if(this.keyMap.get("W")){
+                this.acc = this.comp[0].dir.mult(-this.keyForce*this.gravity*2);
+            }
+            if(this.keyMap.get("A")){
+                this.angVel = -this.angKeyForce;
+            }
+            if(this.keyMap.get("S")){
+                this.acc = this.comp[0].dir.mult(this.keyForce);
+            }
+            if(this.keyMap.get("D")){
+                this.angVel = this.angKeyForce;
+            }
+        }
+        super.keyControl();
+    }
+
+    setPosition(x, y, a = this.angle){
+        this.pos.set(x, y);
+        this.angle = a;
+        this.comp[0].pos = this.pos;
+        this.comp[0].getVertices(this.angle + this.angVel);
+        this.angle += this.angVel;
+    }
+
+    reposition(){
+        super.reposition();
+        this.setPosition(this.pos.add(this.vel).x, this.pos.add(this.vel).y);
+    }
+}
+
+class Capsule extends Body{
+    constructor(x1, y1, x2, y2, r, m = 0, g = false){
+        super();
+        this.comp = [new Circle(x1, y1, r), new Circle(x2, y2, r)];
+        let recV1 = this.comp[1].pos.add(this.comp[1].pos.subtr(this.comp[0].pos).unit().normal().mult(r));
+        let recV2 = this.comp[0].pos.add(this.comp[1].pos.subtr(this.comp[0].pos).unit().normal().mult(r));
+        this.comp.unshift(new Rectangle(recV1.x, recV1.y, recV2.x, recV2.y, 2*r));
+        this.pos = this.comp[0].pos;
+        this.m = m;
+        if (this.m === 0){
+            this.inv_m = 0;
+        } else {
+            this.inv_m = 1 / this.m;
+        }
+        this.inertia = this.m * ((2*this.comp[0].width)**2 +(this.comp[0].length+2*this.comp[0].width)**2) / 12;
+        if (this.m === 0){
+            this.inv_inertia = 0;
+        } else {
+            this.inv_inertia = 1 / this.inertia;
+        }
+        if (g) {
+        this.gravity = Math.sqrt(((Math.PI*r**2)+((x2-x1)*(y2-y1)))/this.m);
+        }
+    }
+
+    keyControl(){
+        if(this.keyMap.get('W')){
+            this.acc = this.comp[0].dir.mult(-this.keyForce);
+        }
+        if(this.keyMap.get('S')){
+            this.acc = this.comp[0].dir.mult(this.keyForce);
+        }
+        if(this.keyMap.get('A')){
+            this.angVel = -this.angKeyForce;
+        }
+        if(this.keyMap.get('D')){
+            this.angVel = this.angKeyForce;
+        }
+        if(!this.keyMap.get('W') && !this.keyMap.get('S')){
+            this.acc.set(0, 0);
+        }
+        super.keyControl();
+    }
+
+    setPosition(x, y, a = this.angle){
+        this.pos.set(x, y);
+        this.angle = a;
+        this.comp[0].pos = this.pos;
+        this.comp[0].getVertices(this.angle + this.angVel);
+        this.comp[1].pos = this.comp[0].pos.add(this.comp[0].dir.mult(-this.comp[0].length/2));
+        this.comp[2].pos = this.comp[0].pos.add(this.comp[0].dir.mult(this.comp[0].length/2));
+        this.angle += this.angVel;
+    }
+
+    reposition(){
+        super.reposition();
+        this.setPosition(this.pos.add(this.vel).x, this.pos.add(this.vel).y);
+    }
+}
+
+class Polygon extends Body{
+    constructor(x, y, r, vN, m = 0, g = false){
+        super();
+        this.comp = [];
+        this.r = r;
+        this.comp.push(new Poly(x, y, r, vN));
+        this.pos = this.comp[0].pos;
+        this.m = m;
+        if (this.m === 0){
+            this.inv_m = 0;
+        } else {
+            this.inv_m = 1 / this.m;
+        }
+        this.inertia = this.m * ((2*this.r)**2) / 12;
+        if (this.m === 0){
+            this.inv_inertia = 0;
+        } else {
+            this.inv_inertia = 1 / this.inertia;
+        }
+        if (g) {
+        super.gravity = Math.sqrt((1/2*r**2) / this.m);
+        }
+    }
+
+    keyControl(){
+        if(this.keyMap.get('W')){
+            this.acc = this.comp[0].dir.mult(-this.keyForce);
+        }
+        if(this.keyMap.get('S')){
+            this.acc = this.comp[0].dir.mult(this.keyForce);
+        }
+        if(this.keyMap.get('A')){
+            this.angVel = -this.angKeyForce;
+        }
+        if(this.keyMap.get('D')){
+            this.angVel = this.angKeyForce;
+        }
+        if(!this.keyMap.get('W') && !this.keyMap.get('S')){
+            this.acc.set(0, 0);
+        }
+        super.keyControl();
+    }
+
+    setPosition(x, y, a = this.angle){
+        this.pos.set(x, y);
+        this.angle = a;
+        this.comp[0].pos = this.pos;
+        this.comp[0].getVertices(this.angle + this.angVel);
+        this.angle += this.angVel;
+    }
+
+    reposition(){
+        super.reposition();
+        this.setPosition(this.pos.add(this.vel).x, this.pos.add(this.vel).y);
+   }
+}
+
+class Pyramid extends Body{
+    constructor(x1, y1, r, m = 0, g = false){
+        super();
+        this.comp = [];
+        this.r = r;
+        let center = new Vector(x1, y1);
+        let upDir = new Vector(0, -1);
+        let p1 = center.add(upDir.mult(r));
+        let p2 = center.add(upDir.mult(-r/2)).add(upDir.normal().mult(-r*Math.sqrt(3)/2));
+        let p3 = center.add(upDir.mult(-r/2)).add(upDir.normal().mult(r*Math.sqrt(3)/2));
+        this.comp.push(new Triangle(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y));
+        this.pos = this.comp[0].pos;
+        this.m = m;
+        if (this.m === 0){
+            this.inv_m = 0;
+        } else {
+            this.inv_m = 1 / this.m;
+        }
+        this.inertia = this.m * ((2*this.r)**2) / 12;
+        if (this.m === 0){
+            this.inv_inertia = 0;
+        } else {
+            this.inv_inertia = 1 / this.inertia;
+        }
+        if (g) {
+            super.gravity = Math.sqrt((1/2*r*r)/this.m);
+        }
+    }
+
+    keyControl(){
+        if(this.keyMap.get('W')){
+            this.acc = this.comp[0].dir.mult(-this.keyForce);
+        }
+        if(this.keyMap.get('S')){
+            this.acc = this.comp[0].dir.mult(this.keyForce);
+        }
+        if(this.keyMap.get('A')){
+            this.angVel = -this.angKeyForce;
+        }
+        if(this.keyMap.get('D')){
+            this.angVel = this.angKeyForce;
+        }
+        if(!this.keyMap.get('W') && !this.keyMap.get('S')){
+            this.acc.set(0, 0);
+        }
+        super.keyControl();
+    }
+
+    setPosition(x, y, a = this.angle){
+        this.pos.set(x, y);
+        this.angle = a;
+        this.comp[0].pos = this.pos;
+        this.comp[0].getVertices(this.angle + this.angVel);
+        this.angle += this.angVel;
+    }
+
+    reposition(){
+        super.reposition();
+        this.setPosition(this.pos.add(this.vel).x, this.pos.add(this.vel).y);
+   }
+}
+
+class Star extends Body{
+    constructor(x1, y1, r, m = 0, g = false){
+        super();
+        this.comp = [];
+        this.r = r;
+        let center = new Vector(x1, y1);
+        let upDir = new Vector(0, -1);
+        let p1 = center.add(upDir.mult(r));
+        let p2 = center.add(upDir.mult(-r/2)).add(upDir.normal().mult(-r*Math.sqrt(3)/2));
+        let p3 = center.add(upDir.mult(-r/2)).add(upDir.normal().mult(r*Math.sqrt(3)/2));
+        this.comp.push(new Triangle(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y));
+        p1 = center.add(upDir.mult(-r));
+        p2 = center.add(upDir.mult(r/2)).add(upDir.normal().mult(-r*Math.sqrt(3)/2));
+        p3 = center.add(upDir.mult(r/2)).add(upDir.normal().mult(r*Math.sqrt(3)/2));
+        this.comp.push(new Triangle(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y));
+        this.pos = this.comp[0].pos;
+        
+        this.m = m;
+        if (this.m === 0){
+            this.inv_m = 0;
+        } else {
+            this.inv_m = 1 / this.m;
+        }
+        this.inertia = this.m * ((2*this.r)**2) / 12;
+        if (this.m === 0){
+            this.inv_inertia = 0;
+        } else {
+            this.inv_inertia = 1 / this.inertia;
+        }
+        if (g) {
+            super.gravity = Math.sqrt((r*r)/this.m);
+        }
+    }
+
+    keyControl(){
+        if(this.keyMap.get('W')){
+            this.acc = this.comp[0].dir.mult(-this.keyForce);
+        }
+        if(this.keyMap.get('S')){
+            this.acc = this.comp[0].dir.mult(this.keyForce);
+        }
+        if(this.keyMap.get('A')){
+            this.angVel = -this.angKeyForce;
+        }
+        if(this.keyMap.get('D')){
+            this.angVel = this.angKeyForce;
+        }
+        if(!this.keyMap.get('W') && !this.keyMap.get('S')){
+            this.acc.set(0, 0);
+        }
+        super.keyControl();
+    }
+
+    setPosition(x, y, a = this.angle){
+        this.pos.set(x, y);
+        this.angle = a;
+        this.comp[0].pos = this.pos;
+        this.comp[1].pos = this.pos;
+        this.comp[0].getVertices(this.angle + this.angVel);
+        this.comp[1].getVertices(this.angle + this.angVel);
+        this.angle += this.angVel;
+    }
+
+    reposition(){
+        super.reposition();
+        this.setPosition(this.pos.add(this.vel).x, this.pos.add(this.vel).y);
+   }
+}
+
+class Wall extends Body{
+    constructor(x1, y1, x2, y2){
+        super();
+        this.start = new Vector(x1, y1);
+        this.end = new Vector(x2, y2);
+        this.comp = [new Line(x1, y1, x2, y2)];
+        this.dir = this.end.subtr(this.start).unit();
+        this.pos = new Vector((x1+x2)/2, (y1+y2)/2);
+    }
+}
+
+function updatePhysics(timestamp) {
+    COLLISIONS.length = 0;
+    
+    BODIES.forEach((b) => {
+        b.keyControl();
+        b.reposition();
+    })
+    
+    BODIES.forEach((b, index) => {
+        for(let bodyPair = index+1; bodyPair < BODIES.length; bodyPair++){
+           if((BODIES[index].layer === BODIES[bodyPair].layer ||
+               BODIES[index].layer === 0 || BODIES[bodyPair].layer === 0) && 
+               collide(BODIES[index], BODIES[bodyPair])){
+                    let bestSat = collide(BODIES[index], BODIES[bodyPair]);
+                    // BODIES[bodyPair].angVel = 0;
+                    COLLISIONS.push(new CollData(BODIES[index], BODIES[bodyPair], bestSat.axis, bestSat.pen, bestSat.vertex));
+           }
+        }
+    });
+
+    COLLISIONS.forEach((c) => {
+        c.penRes();
+        c.collRes();
+    });
+}
+
+const Engine = function(time_step, update, render) {
+
+    this.accumulated_time = 0;
+    this.animation_frame_request = undefined;
+    this.time = undefined;
+    this.time_step = time_step;
+  
+    this.updated = false;
+  
+    this.update = update;
+    this.render = render;
+  
+    this.run = function(time_stamp) {
+      this.accumulated_time += time_stamp - this.time;
+      this.time = time_stamp;
+  
+  
+      if (this.accumulated_time >= this.time_step * 3) {
+        this.accumulated_time = this.time_step;
+      }
+  
+      while (this.accumulated_time >= this.time_step) {
+        this.accumulated_time -= this.time_step;
+        this.update(time_stamp);
+        this.updated = true;
+  
+      }
+  
+      /* This allows us to only draw when the game has updated. */
+      if (this.updated) {
+  
+        this.updated = false;
+        this.render(time_stamp);
+  
+      }
+  
+      this.animation_frame_request = window.requestAnimationFrame(this.handleRun);
+  
+    };
+  
+    this.handleRun = (time_step) => { this.run(time_step); };
+  
+  };
+  
+  Engine.prototype = {
+  
+    constructor: Engine,
+  
+    start: function() {
+  
+      this.accumulated_time = this.time_step;
+      this.time = window.performance.now();
+      this.animation_frame_request = window.requestAnimationFrame(this.handleRun);
+  
+    },
+  
+    stop: function() { window.cancelAnimationFrame(this.animation_frame_request); }
+  
+  };
+
+
+const BODIES = [];
+const COLLISIONS = [];
+
+//STEP 1: setting up the environment
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+var gamelogic = function() {}
+
+var update = function() {
+    updatePhysics();
+    gamelogic();
+}
+
+var render = function() {
+    ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+    BODIES.forEach((b) => {
+        b.render();
+    })
 }
