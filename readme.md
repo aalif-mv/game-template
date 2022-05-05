@@ -4,7 +4,9 @@ jsGame is a javascript game template with a builtin physics engine.
 jsGame uses HTML:5 Canvas to render.
 
 ## download the code
-
+```console
+git clone https://github.com/softdev00/game-template.git
+```
 
 ## How to use
 
