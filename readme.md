@@ -7,7 +7,7 @@ jsGame uses HTML:5 Canvas to render.
 [Download Code](https://github.com/softdev00/game-template/archive/refs/heads/master.zip)
 
 or
-```console
+```bash
 git clone https://github.com/softdev00/game-template.git
 ```
 
