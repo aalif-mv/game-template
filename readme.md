@@ -29,6 +29,11 @@ var init = function() {
 document.body.onload = init;
 ```
 ### Builtin Shapes
+- Circle
+- Rectrangle
+- Triangle
+- Poly / polygon
+- Line
 
 ### Builtin Objects
 These objects are made from combining or using shapes
