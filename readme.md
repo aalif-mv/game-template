@@ -1,3 +1,16 @@
+# jsGame
+jsGame is a javascript game template with a builtin physics engine.
+
+jsGame uses HTML:5 Canvas to render.
+
+## download the code
+
+
+## How to use
+
+You will be scripting your game in the main.js file
+the file will look like this.
+```javascript
 const engine = new Engine(1000/30, update, render); // do not change update and render you can change frame rate 1000/30 to other rates
 
 var gamelogic = function() {
@@ -12,3 +25,4 @@ var init = function() {
 }
 
 document.body.onload = init;
+```
